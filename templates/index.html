@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chatbot Pédagogique — Série S | Lycée Fadel KANE</title>
+<!-- MathJax pour les formules -->
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+<!-- Marked.js pour le Markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary:   #1A1A2E;
+    --accent:    #E94560;
+    --highlight: #0F3460;
+    --light:     #F8F9FA;
+    --white:     #FFFFFF;
+    --gray:      #6c757d;
+    --border:    #dee2e6;
+    --radius:    12px;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--light);
+    color: #212529;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 0.9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border-bottom: 3px solid var(--accent);
+    flex-shrink: 0;
+  }
+  .header-logo {
+    width: 42px; height: 42px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 1.4rem; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .header-info h1 { font-size: 1rem; font-weight: 700; }
+  .header-info p  { font-size: 0.72rem; opacity: 0.75; }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(233,69,96,.25);
+    color: #ff8fa3;
+    border: 1px solid rgba(233,69,96,.4);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  /* ── Matières pills ── */
+  .subjects-bar {
+    background: var(--highlight);
+    padding: 0.5rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .subjects-bar::-webkit-scrollbar { display: none; }
+  .subject-pill {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .subject-pill:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* ── Chat area ── */
+  #chat-window {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    scroll-behavior: smooth;
+  }
+
+  .message {
+    max-width: 82%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    line-height: 1.6;
+    font-size: 0.92rem;
+  }
+  .message.user {
+    background: var(--accent);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .message.assistant {
+    background: var(--white);
+    color: #212529;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .message.assistant h3, .message.assistant h4 {
+    color: var(--primary);
+    margin: 0.6rem 0 0.3rem;
+  }
+  .message.assistant ul, .message.assistant ol {
+    padding-left: 1.4rem;
+    margin: 0.4rem 0;
+  }
+  .message.assistant code {
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: 'Courier New', monospace;
+  }
+  .message.assistant pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 0.8rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+    font-size: 0.83rem;
+  }
+  .message.assistant strong { color: var(--primary); }
+
+  .message-sender {
+    font-size: 0.68rem;
+    font-weight: 600;
+    opacity: 0.6;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Typing indicator */
+  .typing {
+    background: var(--white);
+    align-self: flex-start;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: flex; gap: 5px; align-items: center;
+  }
+  .typing span {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,80%,100% { transform: translateY(0); }
+    40%          { transform: translateY(-6px); }
+  }
+
+  /* ── Input area ── */
+  .input-area {
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    padding: 0.8rem 1rem;
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+  #user-input {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.9rem;
+    font-size: 0.92rem;
+    resize: none;
+    max-height: 130px;
+    outline: none;
+    line-height: 1.5;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  #user-input:focus { border-color: var(--accent); }
+
+  #send-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    width: 44px; height: 44px;
+    cursor: pointer;
+    display: grid; place-items: center;
+    font-size: 1.1rem;
+    transition: background 0.2s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  #send-btn:hover  { background: #c73652; }
+  #send-btn:active { transform: scale(0.95); }
+  #send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  #reset-btn {
+    background: transparent;
+    color: var(--gray);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    width: 44px; height: 44px;
+    cursor: pointer;
+    display: grid; place-items: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  #reset-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Suggestions */
+  .suggestions {
+    padding: 0.5rem 1rem 0;
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .suggestion-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    color: var(--gray);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .suggestion-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  @media (max-width: 480px) {
+    .message { max-width: 92%; }
+    header   { padding: 0.7rem 0.8rem; }
+    .header-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-logo">S</div>
+  <div class="header-info">
+    <h1>Assistant Pédagogique — Série S</h1>
+    <p>Lycée Fadel KANE de Matam · Sénégal</p>
+  </div>
+  <span class="header-badge">IA Éducative</span>
+</header>
+
+<!-- ── Barre des matières ── -->
+<div class="subjects-bar" id="subjects-bar">
+  <button class="subject-pill" onclick="quickSubject('Mathématiques')">📐 Maths</button>
+  <button class="subject-pill" onclick="quickSubject('Physique-Chimie')">⚗️ Physique-Chimie</button>
+  <button class="subject-pill" onclick="quickSubject('SVT')">🌱 SVT</button>
+  <button class="subject-pill" onclick="quickSubject('Sciences de l\'Ingénieur')">⚙️ Sc. Ingénieur</button>
+  <button class="subject-pill" onclick="quickSubject('Philosophie')">💭 Philosophie</button>
+  <button class="subject-pill" onclick="quickSubject('Français')">📖 Français</button>
+  <button class="subject-pill" onclick="quickSubject('Méthode BAC')">🎓 Méthode BAC</button>
+</div>
+
+<!-- ── Fenêtre de chat ── -->
+<div id="chat-window">
+  <!-- Message de bienvenue -->
+  <div class="message assistant">
+    <div class="message-sender">Assistant</div>
+    <strong>Bienvenue au Lycée Fadel KANE ! 👋</strong><br><br>
+    Je m'appelle KEMIT et je suis votre assistant pédagogique pour la <strong>Série S</strong>.
+    Je peux t'aider en :<br>
+    📐 Mathématiques · ⚗️ Physique-Chimie · 🌱 SVT<br>
+    ⚙️ Sciences de l'Ingénieur · 💭 Philosophie · 📖 Français<br><br>
+    Clique sur une matière en haut ou pose directement ta question !
+  </div>
+</div>
+
+<!-- ── Suggestions rapides ── -->
+<div class="suggestions" id="suggestions">
+  <button class="suggestion-btn" onclick="suggest('Explique-moi les limites de fonctions')">Limites de fonctions</button>
+  <button class="suggestion-btn" onclick="suggest('Qu\'est-ce que la mitose ?')">La mitose</button>
+  <button class="suggestion-btn" onclick="suggest('Comment rédiger une dissertation de philo ?')">Dissertation philo</button>
+  <button class="suggestion-btn" onclick="suggest('Les circuits RC en Physique')">Circuits RC</button>
+</div>
+
+<!-- ── Zone de saisie ── -->
+<div class="input-area">
+  <button id="reset-btn" onclick="resetChat()" title="Nouvelle conversation">🔄</button>
+  <textarea
+    id="user-input"
+    rows="1"
+    placeholder="Pose ta question… (Ex: Explique la dérivée d'une fonction)"
+    onkeydown="handleKey(event)"
+    oninput="autoResize(this)"
+  ></textarea>
+  <button id="send-btn" onclick="sendMessage()" title="Envoyer">➤</button>
+</div>
+
+<script>
+const chatWindow   = document.getElementById('chat-window');
+const userInput    = document.getElementById('user-input');
+const sendBtn      = document.getElementById('send-btn');
+const suggestionsEl = document.getElementById('suggestions');
+
+function scrollBottom() {
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 130) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function addMessage(role, content) {
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+  const sender = document.createElement('div');
+  sender.className = 'message-sender';
+  sender.textContent = role === 'user' ? 'Toi' : 'Assistant';
+  div.appendChild(sender);
+  const body = document.createElement('div');
+
+  if (role === 'assistant') {
+    // Rendre le Markdown
+    body.innerHTML = marked.parse(content);
+  } else {
+    body.textContent = content;
+  }
+  div.appendChild(body);
+  chatWindow.appendChild(div);
+  scrollBottom();
+
+  // Re-rendre MathJax si disponible
+  if (window.MathJax && role === 'assistant') {
+    MathJax.typesetPromise([body]).catch(console.error);
+  }
+  return div;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'typing';
+  div.id = 'typing-indicator';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  chatWindow.appendChild(div);
+  scrollBottom();
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+async function sendMessage() {
+  const msg = userInput.value.trim();
+  if (!msg) return;
+
+  // Masquer suggestions
+  suggestionsEl.style.display = 'none';
+
+  addMessage('user', msg);
+  userInput.value = '';
+  userInput.style.height = 'auto';
+  sendBtn.disabled = true;
+  showTyping();
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    const data = await res.json();
+    hideTyping();
+
+    if (data.error) {
+      addMessage('assistant', '⚠️ Erreur : ' + data.error);
+    } else {
+      addMessage('assistant', data.response);
+    }
+  } catch (err) {
+    hideTyping();
+    addMessage('assistant', '⚠️ Impossible de joindre le serveur. Vérifie ta connexion.');
+  } finally {
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+}
+
+function quickSubject(subject) {
+  userInput.value = `Je voudrais réviser ${subject}. Explique-moi un concept important du programme Série S.`;
+  userInput.focus();
+  autoResize(userInput);
+}
+
+function suggest(text) {
+  userInput.value = text;
+  autoResize(userInput);
+  userInput.focus();
+}
+
+async function resetChat() {
+  if (!confirm('Recommencer une nouvelle conversation ?')) return;
+  await fetch('/reset', { method: 'POST' });
+  chatWindow.innerHTML = '';
+  suggestionsEl.style.display = 'flex';
+  addMessage('assistant',
+    'Nouvelle conversation démarrée ! 🎉\n\nQuelle matière veux-tu travailler ?');
+}
+</script>
+</body>
+</html>
