@@ -164,7 +164,19 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
+    # Debug: log raw request body and headers to help diagnose bad requests
+    raw_req = request.get_data(as_text=True)
+    print("DEBUG RAW REQUEST:", repr(raw_req))
+    try:
+        print("DEBUG HEADERS:", dict(request.headers))
+    except Exception:
+        pass
+
+    data = request.get_json(silent=True)
+    if not data:
+        print("DEBUG: request.get_json returned None or invalid JSON")
+        return jsonify({"error": "Corps JSON invalide ou en-tête manquant"}), 400
+
     user_message = data.get("message", "").strip()
 
     if not user_message:
